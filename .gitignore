@@ -1,0 +1,5 @@
+cifar-10-batches-py
+MNIST
+result
+__pycache__
+*.gz
