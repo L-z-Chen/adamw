@@ -1,3 +1,4 @@
+from asyncio.unix_events import BaseChildWatcher
 import os
 import torch
 from torch import nn
@@ -15,9 +16,9 @@ class MLP(nn.Module):
     self.layers = nn.Sequential(
       nn.Flatten(),
       nn.Linear(32 * 32 * 3, 64),
-      nn.Sigmoid(),
+      nn.ReLU(),
       nn.Linear(64, 32),
-      nn.Sigmoid(),
+      nn.ReLU(),
       nn.Linear(32, 10)
     )
     
@@ -31,22 +32,33 @@ if __name__ == '__main__':
     # Set fixed random number seed
     torch.manual_seed(42)
 
-    # Prepare CIFAR-10 dataset
+    # Prepare MNIST dataset
     # dataset = MNIST(os.getcwd(), download=True, transform=transforms.ToTensor())
-    dataset = CIFAR10(os.getcwd(), download=True, transform=transforms.ToTensor())
-    trainloader = torch.utils.data.DataLoader(dataset, batch_size=1000, shuffle=True, num_workers=1)
 
+    # Prepare CIFAR-10 dataset
+    dataset = CIFAR10(os.getcwd(), download=True, transform=transforms.ToTensor())
+    batch_size = 1000
+    trainloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+    steps_in_epoch = len(dataset) // batch_size
     # Initialize the MLP
     mlp = MLP()
 
     # Define the loss function and optimizer
     loss_function = nn.CrossEntropyLoss()
+
     # Adam
     # optimizer = torch.optim.Adam(mlp.parameters(), lr=1e-4)
-    optimizer = Lion(mlp.parameters(), lr=3e-5, weight_decay=10.)
+
+    # Lion
+    optimizer = Lion(mlp.parameters(), lr=1e-4, weight_decay=10.)
+
+    # scheduler 
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+
+
     # Run the training loop
     losses = []
-    for epoch in range(0, 100): # 5 epochs at maximum
+    for epoch in range(0, 100):
 
     # Print epoch
         print(f'Starting epoch {epoch+1}')
@@ -77,12 +89,13 @@ if __name__ == '__main__':
             
             # Print statistics
             current_loss += loss.item()
-            if i % 500 == 499:
+            if i % steps_in_epoch == steps_in_epoch - 1:
                 print('Loss after mini-batch %5d: %.3f' %
-                    (i + 1, current_loss / 500))
-                losses.append(current_loss/500)
+                    (i + 1, current_loss / batch_size))
+                losses.append(current_loss/batch_size)
                 current_loss = 0.0
 
+        scheduler.step()
     import datetime
     # Print to indicate training completion
     print('Training process has finished.')

@@ -25,7 +25,6 @@ def update_fn(p, grad, exp_avg, lr, wd, beta1, beta2):
     exp_avg.mul_(beta2).add_(grad, alpha = 1 - beta2)
 
     return update, exp_avg, p, grad
-# class
 
 class Lion(Optimizer):
     def __init__(
@@ -34,7 +33,6 @@ class Lion(Optimizer):
         lr: float = 1e-4,
         betas: Tuple[float, float] = (0.9, 0.99),
         weight_decay: float = 0.0,
-        use_triton: bool = False
     ):
         assert lr > 0.
         assert all([0. <= beta <= 1. for beta in betas])
